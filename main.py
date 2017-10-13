@@ -74,7 +74,7 @@ def digHoles(group):
                 holes.append(hole)
             else:
                 hole.depth += 1
-            hole.landlords.append(ta.name)
+            hole.landlords.append(ta)
     return holes
 
 def letStudentsQueuing(notBeAssignStudents, holes):
@@ -108,6 +108,32 @@ def checkin(holes):
         leastPressureHole.students = []
     return True
 
+# 安排 DEMO 助教，會從時數最多的多餘助教開始拔除。
+def arrangeTAs(holes, TAs):
+    dutyTable = []
+    for TA in TAs:
+        num = 0
+        for hole in holes:
+            def isTA(landlord):
+                return landlord == TA
+            match = list(filter(isTA, hole.landlords))
+            if match:
+                num += 1
+        dutyTable.append({'TA': TA, 'num': num})
+    for hole in holes:
+        numOfLandlords = len(hole.landlords)
+        numOfCavemen = len(hole.cavemen)
+        diff = numOfLandlords - numOfCavemen
+        if diff > 0:
+            for t in range(diff):
+                matchDuty = list(filter(lambda row: row['TA'] in hole.landlords, dutyTable))
+                index = max(range(len(matchDuty)), key=lambda index: matchDuty[index]['num'])
+                unnecessaryLandlord = matchDuty[index]['TA']
+                hole.landlords.remove(unnecessaryLandlord)
+                matchDuty[index]['num'] -= 1
+    for row in dutyTable:
+        print(row['TA'].name, row['num'], '次DEMO')
+
 def printResultTable(holes, notBeAssignStudents, numOfNotBeAssignStudents):
     assignedStudents = []
     tab = tt.Texttable()
@@ -117,7 +143,11 @@ def printResultTable(holes, notBeAssignStudents, numOfNotBeAssignStudents):
     for hole in holes:
         for caveman in hole.cavemen:
             assignedStudents.append(caveman)
-            tab.add_row([hole.time.sessionStr, ','.join(hole.landlords), caveman.id, caveman.name])
+            landlordNames = []
+            for landlord in hole.landlords:
+                landlordNames.append(landlord.name)
+            tab.add_row([hole.time.sessionStr, ','.join(landlordNames),
+                                                 caveman.id, caveman.name])
             
     tableOfNotBeAssignStudents = tt.Texttable()
     headings = ['學生學號', '學生名字']
@@ -136,8 +166,7 @@ def printResultTable(holes, notBeAssignStudents, numOfNotBeAssignStudents):
     print('未被分配學生清單')
     print(s2)
 
-
-def drawSchedule(filepath, holes):
+def drawSchedule(filepath, holes, type):
     with open(filepath, 'w', encoding='utf-8-sig', newline='') as csvfile:
         fieldnames = ['節次', '10/16(一)', '10/17(二)', '10/18(三)', '10/19(四)']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -155,23 +184,30 @@ def drawSchedule(filepath, holes):
                         and e.time.session == session and e.time.isFirst == isFirst), None)
                     body = ''
                     if hole:
-                        for caveman in hole.cavemen:
-                            body += caveman.id + caveman.name + '\n'
+                        for person in getattr(hole, type):
+                            body += person.id + person.name + '\n'
                     result[sessionStr] = body
                 writer.writerow(result)
 
 def __main__():
+    # 載入學生資訊為未分配清單。
     notBeAssignStudents = parseCsv('students.csv')
-    holes = digHoles(parseCsv('tas.csv'))
+    # 匯入 TA 們有空的時段，並視為「洞」(hole)。
+    TAs = parseCsv('tas.csv')
+    holes = digHoles(TAs)
+    # 計算總學生人數。
     numOfNotBeAssignStudents = len(notBeAssignStudents)
-
+    # 將所有學生放置到他們有空的時段的洞排隊。
     letStudentsQueuing(notBeAssignStudents, holes)
-
+    # 開始安排學生進入洞中。
     while checkin(holes):
         pass
+    # 安排 DEMO 助教。
+    arrangeTAs(holes, TAs)
 
     printResultTable(holes, notBeAssignStudents, numOfNotBeAssignStudents)
 
-    drawSchedule('schedule.csv', holes)
+    drawSchedule('schedule.csv', holes, 'cavemen')
+    drawSchedule('duty.csv', holes, 'landlords')
 
 __main__()

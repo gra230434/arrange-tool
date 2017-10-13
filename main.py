@@ -41,6 +41,9 @@ class Hole:
     def isEmpty(self):
         return len(self.students) == 0
     @property
+    def numOfFreeLandlords(self):
+        return len(self.landlords) - len(self.cavemen)
+    @property
     def pressure(self):
         if not self.isFull:
             return len(self.students) / (self.depth - len(self.cavemen))
@@ -120,7 +123,8 @@ def arrangeTAs(holes, TAs):
             if match:
                 num += 1
         dutyTable.append({'TA': TA, 'num': num})
-    for hole in holes:
+    sortedHoles = list(sorted(holes, key=attrgetter('numOfFreeLandlords')))
+    for hole in sortedHoles:
         numOfLandlords = len(hole.landlords)
         numOfCavemen = len(hole.cavemen)
         diff = numOfLandlords - numOfCavemen

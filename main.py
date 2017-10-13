@@ -4,7 +4,6 @@ import sys
 import texttable as tt
 from texttable import Texttable
 from operator import attrgetter
-from pprint import pprint
 
 class Person:
     def __init__(self, id, name, freetimes):
@@ -109,6 +108,58 @@ def checkin(holes):
         leastPressureHole.students = []
     return True
 
+def printResultTable(holes, notBeAssignStudents, numOfNotBeAssignStudents):
+    assignedStudents = []
+    tab = tt.Texttable()
+    headings = ['時間', '助教', '學生學號', '學生名字']
+    tab.set_deco(Texttable.VLINES)
+    tab.header(headings)
+    for hole in holes:
+        for caveman in hole.cavemen:
+            assignedStudents.append(caveman)
+            tab.add_row([hole.time.sessionStr, ','.join(hole.landlords), caveman.id, caveman.name])
+            
+    tableOfNotBeAssignStudents = tt.Texttable()
+    headings = ['學生學號', '學生名字']
+    tableOfNotBeAssignStudents.set_deco(Texttable.VLINES)
+    tableOfNotBeAssignStudents.header(headings)
+    for student in assignedStudents:
+        notBeAssignStudents.remove(student)
+    for student in notBeAssignStudents:
+        tableOfNotBeAssignStudents.add_row([student.id, student.name])
+
+    s = tab.draw()
+    s2 = tableOfNotBeAssignStudents.draw()
+    print(s)
+    print('已被分配學生數 / 總學生數 : ', len(assignedStudents), '/', numOfNotBeAssignStudents)
+    print()
+    print('未被分配學生清單')
+    print(s2)
+
+
+def drawSchedule(filepath, holes):
+    with open(filepath, 'w', encoding='utf-8-sig', newline='') as csvfile:
+        fieldnames = ['節次', '10/16(一)', '10/17(二)', '10/18(三)', '10/19(四)']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        def char_range(c1, c2):
+            for c in xrange(ord(c1), ord(c2)+1):
+                yield chr(c)
+        for session in map(chr, range(*map(ord,['C', 'M']))) :
+            for isFirst in [True, False]:
+                upOrDown = ('下', '上')[isFirst]
+                result = {'節次': session + upOrDown}
+                for day in range(4):
+                    sessionStr = '10/{}({})'.format(16 + day, ('一', '二', '三', '四')[day])
+                    hole = next((e for e in holes if e.time.day == day + 1 
+                        and e.time.session == session and e.time.isFirst == isFirst), None)
+                    body = ''
+                    if hole:
+                        for caveman in hole.cavemen:
+                            body += caveman.id + caveman.name + '\n'
+                    result[sessionStr] = body
+                writer.writerow(result)
+
 def __main__():
     notBeAssignStudents = parseCsv('students.csv')
     holes = digHoles(parseCsv('tas.csv'))
@@ -119,26 +170,8 @@ def __main__():
     while checkin(holes):
         pass
 
-    assignedStudents = []
-    tab = tt.Texttable()
-    headings = ['時間','助教','學生學號','學生名字']
-    tab.set_deco(Texttable.VLINES)
-    tab.header(headings)
-    for hole in holes:
-        for caveman in hole.cavemen:
-            assignedStudents.append(caveman)
-            tab.add_row([hole.time.sessionStr, ','.join(hole.landlords), caveman.id, caveman.name])
-            
-    tableOfNotBeAssignStudents = tt.Texttable()
-    for student in assignedStudents:
-        notBeAssignStudents.remove(student)
-    for student in notBeAssignStudents:
-        tableOfNotBeAssignStudents.add_row([student.id, student.name])
+    printResultTable(holes, notBeAssignStudents, numOfNotBeAssignStudents)
 
-    s = tab.draw()
-    s2 = tableOfNotBeAssignStudents.draw()
-    print(s)
-    print(str(len(assignedStudents)) + '/' + str(numOfNotBeAssignStudents))
-    print(s2)
+    drawSchedule('schedule.csv', holes)
 
 __main__()

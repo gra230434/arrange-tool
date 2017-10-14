@@ -171,8 +171,12 @@ def printResultTable(holes, notBeAssignStudents, numOfNotBeAssignStudents):
     print(s2)
 
 def drawSchedule(filepath, holes, type):
+    timeRanges = list(['1010~1035', '1035~1100', '1110~1135', '1135~1200', '1320~1345', '1345~1410', 
+    '1420~1445', '1445~1510', '1530~1555', '1555~1620', '1630~1655', '1655~1720', '1830~1855',
+    '1855~1920', '1930~1955', '1955~2020', '2030~2055', '2055~2120', '2130~2155', '2155~2220'])
+    timeRanges.reverse()
     with open(filepath, 'w', encoding='utf-8-sig', newline='') as csvfile:
-        fieldnames = ['節次', '10/16(一)', '10/17(二)', '10/18(三)', '10/19(四)']
+        fieldnames = ['節次', '時段', '10/16(一)', '10/17(二)', '10/18(三)', '10/19(四)']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         def char_range(c1, c2):
@@ -181,7 +185,7 @@ def drawSchedule(filepath, holes, type):
         for session in map(chr, range(*map(ord,['C', 'M']))) :
             for isFirst in [True, False]:
                 upOrDown = ('下', '上')[isFirst]
-                result = {'節次': session + upOrDown}
+                result = {'節次': session + upOrDown, '時段': timeRanges.pop()}
                 for day in range(4):
                     sessionStr = '10/{}({})'.format(16 + day, ('一', '二', '三', '四')[day])
                     hole = next((e for e in holes if e.time.day == day + 1 

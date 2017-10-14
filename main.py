@@ -28,10 +28,11 @@ class Time:
 class Hole:
     def __init__(self, time):
         self.time = time
-        self.landlords = []
         self.depth = 1
+        self.landlords = []
         self.cavemen = []
         self.students = []
+        self.freeLandlords = []
     @property
     def isFull(self):
         if len(self.cavemen) > self.depth:
@@ -134,6 +135,7 @@ def arrangeTAs(holes, TAs):
                 index = max(range(len(matchDuty)), key=lambda index: matchDuty[index]['num'])
                 unnecessaryLandlord = matchDuty[index]['TA']
                 hole.landlords.remove(unnecessaryLandlord)
+                hole.freeLandlords.append(unnecessaryLandlord)
                 matchDuty[index]['num'] -= 1
     for row in dutyTable:
         print(row['TA'].name, row['num'], '次DEMO')
@@ -217,5 +219,6 @@ def __main__():
 
     drawSchedule('schedule.csv', holes, 'cavemen')
     drawSchedule('duty.csv', holes, 'landlords')
+    drawSchedule('tas_freetime.csv', holes, 'freeLandlords')
 
 __main__()
